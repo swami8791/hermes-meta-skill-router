@@ -9,6 +9,7 @@
 ![hermes](https://img.shields.io/badge/hermes--agent-2332a64-8A2BE2)
 ![mode](https://img.shields.io/badge/default%20mode-shadow-lightgrey)
 ![status](https://img.shields.io/badge/status-MVP-orange)
+[![license](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 
 *Pick the fewest trusted skills that cover a request. Load only those. Reroute once. Trace everything.*
 
@@ -173,4 +174,4 @@ contracts, no new dependencies).
 
 ## License
 
-Not yet declared for this repository. See [`CHANGELOG.md`](CHANGELOG.md) for release notes.
+[MIT](LICENSE). See [`CHANGELOG.md`](CHANGELOG.md) for release notes.

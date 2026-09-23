@@ -16,7 +16,7 @@ All notable changes to this project are documented here. The format follows
   per-session state, `shadow` / `advisory` / `active` modes.
 - Test suite (70 tests) with synthetic skill fixtures and a real `PluginManager` discovery path;
   GitHub Actions workflow pinned to the Hermes commit above.
-- Root README, contributing guide, Makefile.
+- Root README, contributing guide, Makefile, MIT license.
 
 ### Changed
 - `SKILL.md`, `skill.manifest.yaml`, and `references/` now describe the verified Hermes primitives
