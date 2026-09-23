@@ -1,0 +1,4 @@
+interface:
+  display_name: "Hermes Meta-Skill Router"
+  short_description: "Discover and orchestrate installed skills"
+  default_prompt: "Use $hermes-meta-skill-router to discover, select, sequence, and supervise the best installed skills for this request."
