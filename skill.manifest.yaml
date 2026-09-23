@@ -33,7 +33,9 @@ interface:
     - {name: "execution_plan", type: "object/execution-plan.v1"}
   side_effects: []
 requirements:
-  tools: ["skills_list", "skill_view"]
+  # On Hermes the router runs as the plugin under plugin/meta-skill-router; this file is the
+  # optional overlay format described in references/contracts.md, not something Hermes reads itself.
+  tools: ["skills_list", "skill_view", "skill_route"]
   credentials: []
   platforms: ["hermes"]
   dependencies: []

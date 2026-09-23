@@ -1,83 +1,75 @@
 # Hermes Integration
 
+Verified against `NousResearch/hermes-agent` @ `2332a64` (2026-09-23). The full analysis, gap list,
+conflicts, and acceptance criteria live in
+[`docs/meta-skill-router-integration-plan.md`](../docs/meta-skill-router-integration-plan.md).
+
 ## Boundary
 
-Place the router between Hermes intent interpretation and skill execution:
+The router is a Hermes **plugin**, not a core service. It sits on the sanctioned per-turn seams:
 
 ```text
-User -> Intent -> router.route() -> ExecutionPlan -> Supervisor
-     -> selected skills/tools -> Evaluator -> optional reroute -> Response
+User -> explicit /skill rewrite (untouched) -> AIAgent.run_conversation
+     -> build_turn_context: pre_llm_call  ==> router.route_turn()  -> directive appended to the user message
+     -> model -> tool round: pre_tool_call ==> skill_view gating (active mode)
+                             skill_route   ==> one bounded reroute
+                             post_tool_call ==> load observation
+     -> on_session_end                    ==> turn close + trace
 ```
 
-The router is a core service wrapped by this meta-skill, not prompt text alone.
+The system prompt is byte-stable per conversation and is never touched. Loading stays on `skill_view`.
 
-## Verify before implementation
+## Verified primitives
 
-Inspect the real Hermes codebase and verify:
+| Assumed | Actual | Notes |
+|---|---|---|
+| `skills_list` | `skills_list(category?)` | name + description (≤1,024 chars) + category; no tags, no query |
+| `skill_view` | `skill_view(name, file_path?)` | the only loader: readiness/secret capture, dedup stub, usage telemetry, templating |
+| `delegate_task` | `delegate_task(tasks=[...], action?)` | needs a live parent agent; top-level runs in the background; not callable from a hook |
+| todo | tool `todo_list`, in-memory `TodoStore` | not persisted, not in hook payloads; derivable from the latest `todo_list` tool result |
 
-- Skill registry and discovery
-- Skill instruction loading
-- Tool execution boundaries
-- Permission enforcement
-- Task state
-- Delegation primitives
-- Logging and telemetry
-- Actual names and behavior of any skill-listing, skill-viewing, delegation, or todo primitives
+## Plugin surface used
 
-Map proposed components to existing code and flag conflicts.
+`register_hook` (`pre_llm_call`, `pre_tool_call`, `post_tool_call`, `on_session_end`), `register_tool`
+(`skill_route`, toolset `meta_skill_router`), `register_auxiliary_task` (`meta_skill_router`),
+`register_command` (`/route`), optional `register_system_prompt_section` (after memory, frozen per
+session), `ctx.llm.complete_structured`, `ctx.get_config`, `ctx.state.data_dir`.
 
-## Stable interfaces
+Hermes helpers reused (public, in-tree): `agent.skill_utils.{parse_frontmatter, iter_skill_index_files,
+iter_project_skill_files, get_project_skills_dirs, get_all_skills_dirs, get_external_skills_dirs,
+get_disabled_skill_names, skill_matches_*}`, `tools.skill_usage.{is_bundled, is_hub_installed,
+is_agent_created}`, `agent.redact.redact_sensitive_text`, `toolsets.resolve_toolset`,
+`hermes_cli.plugins.get_plugin_manager().list_plugin_skill_metadata()`. Every import degrades gracefully.
+
+## Stable interfaces (plugin)
 
 ```text
-route(task_intent, task_state, policy_context) -> ExecutionPlan
-execute_plan(plan, artifact_store, policy_context) -> ExecutionResult
-evaluate(result, success_criteria) -> CompletionAssessment
+Router.route_turn(user_message, history, session_id, turn_id, platform) -> RouteResult
+Router.reroute(session_id, remaining_requirement, tried_skills?)      -> tool result dict
+Router.before_skill_view(args, session_id) -> {"action": "block", "message"} | None
+Router.after_skill_view(args, session_id, status) / Router.close_turn(session_id)
 ```
 
-Completion states: `complete`, `partially_complete`, `needs_capability`, `blocked`, and `failed`.
+Decisions: `NO_SKILL`, `SELECT_SKILLS`, `CAPABILITY_GAP`, plus `PINNED` (explicit `/skill`) and
+`SKIPPED` (gated out). Completion states from the original design (`complete`, `partially_complete`,
+`needs_capability`, `blocked`, `failed`) are the model's own exit reporting; the router does not
+evaluate outputs in the MVP.
 
 ## Rollout
 
-1. Catalog: wrap the registry, scan roots, compile manifests, record trust/digests, and build incremental indexes.
-2. Routing: add `route()` and intercept implicit selection while preserving valid explicit user pins.
-3. Supervision: add `execute_plan()` and route skill loading, tools, delegation, and artifacts through it.
-4. Evaluation: add validators and one bounded MVP recovery pass.
-5. Activation: deploy in shadow, advisory, then active mode.
+1. `shadow`: trace decisions, zero prompt bytes. Compare with what the model loaded unaided.
+2. `advisory`: inject the directive; measure unselected-load rate.
+3. `active`: gate `skill_view` outside the selection; one reroute per turn.
+4. Upstream (optional, separate PRs): additive `available_tools` in the `pre_llm_call` payload; a
+   config-gated router-aware variant of the skills-index guidance.
 
 ## Responsibility split
 
 | Responsibility | Owner |
 |---|---|
-| Discovery, parsing, trust, digests | Deterministic |
-| Retrieval, prerequisites, permissions | Deterministic |
-| Interface compatibility and baseline score | Deterministic |
-| Intent interpretation and ambiguous comparison | LLM |
-| Sequencing proposal | LLM |
-| DAG and output validation | Deterministic first |
-| Qualitative assessment | LLM when required |
-| Budgets and progress checks | Deterministic |
-| Gap object | Deterministic |
-| Explanation and final synthesis | LLM |
-
-The LLM proposes actions; deterministic code decides whether they are legal and executable.
-
-## Pre-coding prompt
-
-```text
-Use the Hermes Meta-Skill Router architecture as the approved direction.
-
-Inspect the existing Hermes codebase and determine exactly how it integrates. Do not implement anything yet.
-
-Produce:
-1. A current-state map of discovery, loading, orchestration, execution, permissions, task state, and logging.
-2. A gap analysis.
-3. Components to reuse, modify, or replace.
-4. Verification of assumed skill-listing, viewing, delegation, and task-state primitives.
-5. The exact integration point between intent and execution.
-6. A file-by-file plan with responsibilities, order, dependencies, tests, and migration risks.
-7. The smallest MVP proving dynamic discovery, metadata-only retrieval, semantic selection, deferred full loading, no/one/multiple-skill decisions, one reroute, and logs.
-8. Conflicts with the real codebase.
-9. Measurable acceptance criteria.
-
-Do not write production code, install packages, change behavior, or invent integration points.
-```
+| Discovery, frontmatter parsing, provenance, fingerprints | Deterministic (plugin) |
+| Eligibility, BM25 shortlist, budgets, gating | Deterministic (plugin) |
+| Selection among shortlisted candidates | LLM (one structured call, validated by code) |
+| Loading, permissions, execution | Hermes (`skill_view`, approval gates, agent loop) |
+| Remaining-requirement judgment (reroute trigger) | LLM (the main model, via `skill_route`) |
+| Trace | Deterministic (plugin), redacted |

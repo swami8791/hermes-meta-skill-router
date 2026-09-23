@@ -1,0 +1,40 @@
+name: tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+env:
+  # Commit of NousResearch/hermes-agent the plugin is developed and tested against.
+  HERMES_AGENT_SHA: 2332a6433a14d09d239baa963ca12a4cd8271e2d
+
+jobs:
+  pytest:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Clone hermes-agent at the pinned commit
+        run: |
+          git init .hermes-agent
+          git -C .hermes-agent remote add origin https://github.com/NousResearch/hermes-agent
+          git -C .hermes-agent fetch --depth 1 origin "$HERMES_AGENT_SHA"
+          git -C .hermes-agent checkout FETCH_HEAD
+
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+          cache-dependency-glob: ".hermes-agent/uv.lock"
+
+      - name: Install hermes-agent runtime + dev dependencies
+        working-directory: .hermes-agent
+        run: uv sync --frozen --extra dev
+
+      - name: Run plugin tests
+        env:
+          HERMES_AGENT_SRC: ${{ github.workspace }}/.hermes-agent
+          TZ: UTC
+          PYTHONHASHSEED: "0"
+        run: .hermes-agent/.venv/bin/python -m pytest -q

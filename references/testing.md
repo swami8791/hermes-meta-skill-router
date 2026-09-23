@@ -44,13 +44,18 @@ Measure top-1 accuracy, correct no-skill choices, composition accuracy, gap prec
 
 ## MVP acceptance
 
-1. Detect a new trusted skill without router-code changes.
-2. Route using metadata before selection.
-3. Load full instructions only for selected skills.
-4. Pass golden no/one/sequential-multi cases.
-5. Reject untrusted or ineligible top matches.
-6. Pass typed artifacts between two skills.
-7. Perform one bounded reroute.
-8. Stop on no progress or exhausted budgets.
-9. Return a valid capability gap.
-10. Produce a reconstructable, secret-redacted trace.
+Measured by `tests/` (run with `HERMES_AGENT_SRC` pointing at the pinned hermes-agent checkout); the
+numbered criteria A1–A13 in `docs/meta-skill-router-integration-plan.md` section 11 are the contract.
+
+1. Detect a new trusted skill without router-code changes (`test_catalog.py`).
+2. Route using metadata before selection: ≤4 KB read per SKILL.md, bodies never enter the prompt (`test_catalog.py`, `test_selector.py`).
+3. Load full instructions only for selected skills: active-mode gating, advisory-mode measurement (`test_engine.py`).
+4. Pass golden no/one/sequential-multi/gap/pinned/skipped cases (`test_engine.py`).
+5. Reject untrusted or ineligible top matches (`test_eligibility.py`).
+6. Typed artifacts between two skills — moved to V2 (`delegate_task.output_schema`).
+7. Perform exactly one bounded reroute; the second call is `budget_exhausted` without an LLM call (`test_engine.py`).
+8. Stop on exhausted budgets: skills-per-turn and reroutes-per-turn (`test_engine.py`).
+9. Return a valid `capability-gap.v1` object (`test_engine.py`).
+10. Produce a reconstructable, secret-redacted trace (`test_engine.py`, `test_state_trace_config.py`).
+11. Fail open: selector errors and bad JSON yield `NO_SKILL` and the turn continues (`test_selector.py`, `test_engine.py`).
+12. Load through Hermes' real PluginManager and dispatch through its hook and registry paths (`test_plugin_registration.py`).

@@ -14,17 +14,17 @@ DISCOVER -> SELECT -> SEQUENCE -> SUPERVISE -> EVALUATE -> ADAPT
 ## Operating loop
 
 1. Normalize the requested outcome, constraints, inputs, side effects, and success criteria.
-2. Discover installed skills through the host registry and configured roots.
-3. Read lightweight metadata first. Never load every full `SKILL.md`.
+2. Discover installed skills through the host registry and configured roots (on Hermes: profile, project, external, and plugin skill dirs).
+3. Read lightweight metadata first (frontmatter only). Never load every full `SKILL.md`.
 4. Filter candidates for trust, permissions, prerequisites, platform, and input readiness.
 5. Rank eligible candidates by capability fit, interface compatibility, cost, latency, reliability, and risk.
-6. Choose `NO_SKILL`, `SELECT_SKILLS`, `NEED_MORE_METADATA`, or `CAPABILITY_GAP`.
-7. Load full instructions only for selected skills.
+6. Choose `NO_SKILL`, `SELECT_SKILLS`, `NEED_MORE_METADATA`, or `CAPABILITY_GAP`. Stand down (`PINNED`) when the user invoked a skill explicitly.
+7. Load full instructions only for selected skills, through the host's loader (`skill_view` on Hermes), in the selected order.
 8. Revalidate proposed use against the loaded instructions.
-9. Build a typed execution plan; use a DAG for branching or parallel work.
-10. Execute through the host supervisor within existing authorization.
+9. Sequence the selected skills; use the host's delegation primitive for parallel work rather than a router-owned DAG.
+10. Execute through the host agent loop within existing authorization; the router never runs tools itself.
 11. Validate outputs deterministically before applying qualitative judgment.
-12. Route again only for unmet requirements and preserve completed artifacts.
+12. Route again only for the unmet requirement (`skill_route` on Hermes) and preserve completed work.
 13. Stop when criteria are satisfied, progress stalls, or a budget or permission boundary is reached.
 
 ## Selection rules
@@ -58,7 +58,7 @@ Wrap results in a typed artifact envelope containing producer, status, data, pro
 ## Recursive routing limits
 
 - Route remaining requirements, not the entire original request.
-- Default to four routing passes and eight total selected skills.
+- Hermes MVP defaults: one reroute per turn, three skills per decision, five skills per turn (the host's stacked-skill cap). Raise them only with trace evidence.
 - Repeat a skill only when its manifest permits retry and the failure is retryable.
 - Track requirement fingerprints and measurable progress.
 - Stop after two consecutive passes without progress.

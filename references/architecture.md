@@ -162,9 +162,17 @@ Recovery:
 
 ## Roadmap
 
-MVP: local discovery, manifest adapters, SQLite catalog, lexical and embedding retrieval, basic trust, no/one/sequential-multi routing, deferred instruction loading, artifact envelopes, deterministic checks, one reroute, gap response, JSONL traces, and golden tests.
+MVP (implemented as a Hermes plugin under `plugin/meta-skill-router/`): local, project, external and
+plugin skill discovery; frontmatter manifest adapter with optional overlay; in-memory catalog with a
+stat-signature cache; BM25 + Snowball retrieval; provenance-derived trust; no/one/sequential-multi
+routing through one structured LLM call validated by code; deferred loading via `skill_view` with
+active-mode gating; one bounded reroute (`skill_route`); capability-gap objects; redacted JSONL
+traces; golden tests. Execution is the host agent loop; there is no separate supervisor.
 
-V2: parallel DAGs, capability ontology, reliability metrics, learned reranking, corrections, version pinning, resumable checkpoints, workspace policies, dry runs, and approved registry recommendations.
+V2: embedding retrieval (no provider abstraction exists in Hermes core today), typed artifact
+envelopes and parallel composition via `delegate_task.output_schema`, capability ontology, reliability
+metrics, learned reranking, corrections, version pinning, resumable checkpoints, workspace policies,
+approved registry recommendations, and the optional upstream `pre_llm_call` tool-availability field.
 
 V3: federated catalogs, sandboxed runtimes, publisher signing and revocation, agent capability negotiation, cost/latency optimization, multi-agent delegation, privacy-aware remote skills, learned compositions, and enterprise audit controls.
 
