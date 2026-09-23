@@ -1,19 +1,35 @@
 <div align="center">
 
-# 🧭 Hermes Meta-Skill Router
+# hermes-router
 
-**Dynamic skill discovery, semantic routing, composition, supervision, and capability-gap detection for [Hermes Agent](https://github.com/NousResearch/hermes-agent).**
+**Your agent has skills. This decides which ones earn context.**
+
+[![Hermes Plugin](https://img.shields.io/badge/Hermes-Plugin-D97757?style=for-the-badge)](#install)
+[![License: MIT](https://img.shields.io/badge/License-MIT-14B8A6?style=for-the-badge)](LICENSE)
+[![Python 3.11+](https://img.shields.io/badge/Python-3.11%2B-3B82F6?style=for-the-badge)](#development)
+[![Decision path](https://img.shields.io/badge/decision_path-hybrid-8B5CF6?style=for-the-badge)](#how-it-works)
 
 [![tests](https://github.com/swami8791/hermes-meta-skill-router/actions/workflows/tests.yml/badge.svg)](https://github.com/swami8791/hermes-meta-skill-router/actions/workflows/tests.yml)
-![python](https://img.shields.io/badge/python-3.11%2B-blue)
-![hermes](https://img.shields.io/badge/hermes--agent-2332a64-8A2BE2)
-![mode](https://img.shields.io/badge/default%20mode-shadow-lightgrey)
-![status](https://img.shields.io/badge/status-MVP-orange)
-[![license](https://img.shields.io/badge/license-MIT-green)](LICENSE)
+[![metadata only](https://img.shields.io/badge/discovery-metadata_only-success?style=flat-square)](#guarantees)
+[![shortlist](https://img.shields.io/badge/shortlist-%E2%89%A412-success?style=flat-square)](#configuration)
+[![selected](https://img.shields.io/badge/selected-%E2%89%A43-success?style=flat-square)](#configuration)
+[![reroutes](https://img.shields.io/badge/reroutes-1-success?style=flat-square)](#guarantees)
+[![fail open](https://img.shields.io/badge/failure_mode-fail_open-success?style=flat-square)](#guarantees)
+[![stars](https://img.shields.io/github/stars/swami8791/hermes-meta-skill-router?style=flat-square&color=yellow)](https://github.com/swami8791/hermes-meta-skill-router/stargazers)
 
-*Pick the fewest trusted skills that cover a request. Load only those. Reroute once. Trace everything.*
+<br>
+
+*Discover broadly. Load narrowly. Explain every choice.*
+
+<br>
+
+[Install](#quick-start) · [How it works](#how-it-works) · [Modes](#modes) · [Guarantees](#guarantees) · [Development](#development)
 
 </div>
+
+<br>
+
+<img src="assets/demo.svg" alt="Hermes Meta-Skill Router selecting the minimum trusted skill plan from metadata" width="100%">
 
 ---
 
