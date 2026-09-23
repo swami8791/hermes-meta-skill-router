@@ -1,0 +1,63 @@
+schema_version: "1.0"
+identity:
+  id: "hermes.meta-skill-router"
+  name: "Hermes Meta-Skill Router"
+  version: "0.1.0"
+  description: "Discovers and orchestrates installed skills dynamically."
+  purpose: "Select the smallest trusted capability set that completes a request."
+  publisher: "nehal-swami"
+routing:
+  capabilities:
+    - "skills.discovery"
+    - "skills.semantic-routing"
+    - "skills.composition"
+    - "skills.supervision"
+    - "skills.capability-gap-detection"
+  intents:
+    - "Choose and sequence installed skills for a task"
+    - "Evaluate whether another capability is required"
+  positive_triggers:
+    - "The request may benefit from one or more installed skills"
+    - "Hermes needs to route between intent and execution"
+  negative_triggers:
+    - "The user pins a valid skill and no composition is required"
+  anti_capabilities:
+    - "skill-installation"
+    - "trust-approval"
+interface:
+  inputs:
+    - {name: "task_intent", type: "object/task-intent.v1", required: true}
+    - {name: "task_state", type: "object/task-state.v1", required: true}
+    - {name: "policy_context", type: "object/policy-context.v1", required: true}
+  outputs:
+    - {name: "execution_plan", type: "object/execution-plan.v1"}
+  side_effects: []
+requirements:
+  tools: ["skills_list", "skill_view"]
+  credentials: []
+  platforms: ["hermes"]
+  dependencies: []
+  incompatible_with: []
+execution:
+  mode: "inline"
+  estimated_tokens: 3000
+  estimated_latency_ms: 2500
+  timeout_ms: 30000
+  idempotency: "safe-to-retry"
+  parallel_safe: false
+  max_retries: 1
+evaluation:
+  success_conditions:
+    - "The decision covers the task with the smallest eligible capability set"
+    - "Only selected full skill instructions are loaded"
+    - "Trust, permission, and recursion policies are satisfied"
+  validators: ["execution-plan-schema", "policy-compliance"]
+security:
+  trust_requirement: "core"
+  permission_scope: []
+  data_classification: {maximum_input: "confidential"}
+  requires_user_confirmation: []
+discovery:
+  tags: ["hermes", "routing", "orchestration", "skills"]
+  deprecated: false
+  replacement: null
