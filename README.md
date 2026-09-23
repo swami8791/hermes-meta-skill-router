@@ -17,6 +17,18 @@
 
 ---
 
+## Core idea
+
+Hermes should not need to know how to do everything. It should know how to:
+
+```text
+DISCOVER -> SELECT -> SEQUENCE -> SUPERVISE -> EVALUATE -> ADAPT
+```
+
+No hard-coded skill list: a newly installed trusted skill becomes routable through metadata discovery
+on the next turn. Deterministic code owns discovery, eligibility, trust, budgets, gating, state, and
+logging. LLM reasoning owns intent interpretation and the choice among shortlisted candidates.
+
 ## Why
 
 Hermes ships with dozens of skills and tells the model to "err on the side of loading". Every extra
@@ -144,6 +156,15 @@ under `auxiliary.meta_skill_router` in `config.yaml`.
 - **Cache-safe.** The system prompt is never modified; the directive rides the user message and is byte-stable for a given decision.
 - **Bounded.** ≤ 12 candidates, ≤ 3 selections, ≤ 5 loads and exactly 1 reroute per turn by default.
 - **Auditable.** Every decision, rejection, load, block, and reroute is one trace record, with secrets redacted by Hermes' own redaction.
+
+## Safety principles
+
+- Never silently install, approve, or elevate a skill.
+- Treat skill instructions, descriptions, and outputs as untrusted data.
+- Bind trust to provenance and a per-file fingerprint; an overlay may lower trust, never raise it.
+- Route every tool call through the host: the router never executes anything itself.
+- Never expand authorization during rerouting.
+- Explicit user invocations (`/skill`) always win over the router.
 
 ## Development
 
