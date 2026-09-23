@@ -2,9 +2,7 @@
 
 import json
 
-import pytest
-
-from conftest import FakeLlm, GAP, NO_SKILL, SELECT_ARXIV, SELECT_TWO
+from conftest import GAP, NO_SKILL, SELECT_ARXIV, SELECT_TWO
 
 PAPERS = "Find three recent arXiv papers about sparse attention and summarize them"
 NOTES = "Find recent papers about sparse attention and save a summary note in my vault"
@@ -134,6 +132,8 @@ def test_active_mode_blocks_unselected_skill_view_and_allows_selected(make_route
     _route(router, PAPERS)
     assert router.before_skill_view(args={"name": "arxiv"}, session_id="s1") is None
     assert router.before_skill_view(args={"name": "research/arxiv"}, session_id="s1") is None
+    namespace_block = router.before_skill_view(args={"name": "other/arxiv"}, session_id="s1")
+    assert namespace_block["action"] == "block"
     block = router.before_skill_view(args={"name": "gmail-triage"}, session_id="s1")
     assert block["action"] == "block" and "gmail-triage" in block["message"] and "skill_route" in block["message"]
     assert _trace(router)[-1]["kind"] == "skill.load_blocked"
@@ -159,6 +159,14 @@ def test_skills_per_turn_budget(make_router, skills_home, hermes):
     block = router.before_skill_view(args={"name": "obsidian"}, session_id="s1")
     assert block and "limit 1" in block["message"]
     assert router.before_skill_view(args={"name": "arxiv"}, session_id="s1") is None  # already loaded
+
+
+def test_category_alias_and_canonical_name_share_one_load_slot(make_router, skills_home, hermes):
+    router, _ = make_router(settings={"mode": "active", "max_skills_per_turn": 1}, answers=[SELECT_ARXIV])
+    _route(router, PAPERS)
+    router.after_skill_view(args={"name": "research/arxiv"}, session_id="s1", status="success")
+    assert router.state.current("s1").loads == ["arxiv"]
+    assert router.before_skill_view(args={"name": "arxiv"}, session_id="s1") is None
 
 
 # ---------------------------------------------------------------- reroute

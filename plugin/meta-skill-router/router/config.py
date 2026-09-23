@@ -58,7 +58,12 @@ def _coerce(name: str, raw: Any, default: Any) -> Any:
         if isinstance(default, bool):
             if isinstance(raw, bool):
                 return raw
-            return str(raw).strip().lower() in ("1", "true", "yes", "on")
+            value = str(raw).strip().lower()
+            if value in ("1", "true", "yes", "on"):
+                return True
+            if value in ("0", "false", "no", "off"):
+                return False
+            raise ValueError(value)
         if isinstance(default, int):
             value = int(raw)
             if value < 0:

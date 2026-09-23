@@ -37,6 +37,7 @@ class RouteResult:
     rejections: List[Dict[str, Any]] = field(default_factory=list)
     directive: Optional[str] = None
     allowed: List[str] = field(default_factory=list)
+    allowed_aliases: List[str] = field(default_factory=list)
     skipped_reason: str = ""
     latency_ms: int = 0
     trace: Optional[Dict[str, Any]] = None
@@ -134,8 +135,16 @@ class Router:
                               timeout_s=cfg.selection_timeout_s, task=task, purpose=purpose)
         self._ensure_explicit(decision, intent, cfg)
         allowed = list(dict.fromkeys(decision.selected_names() + intent.explicit_skill_names))
+        by_name = {m.name: m for m in eligible}
+        allowed_aliases: List[str] = []
+        for name in allowed:
+            allowed_aliases.append(name)
+            manifest = by_name.get(name)
+            if manifest and manifest.category not in ("", "general", "plugin"):
+                allowed_aliases.append(f"{manifest.category}/{manifest.name}")
         rej = [{"name": r.name, "reasons": r.reasons} for r in rejections[:20]]
         return RouteResult(decision=decision, candidates=candidates, rejections=rej, allowed=allowed,
+                           allowed_aliases=list(dict.fromkeys(allowed_aliases)),
                            latency_ms=int((time.monotonic() - started) * 1000))
 
     @staticmethod
@@ -181,7 +190,8 @@ class Router:
     def _finish(self, intent: TaskIntent, cfg: RouterConfig, result: RouteResult) -> RouteResult:
         if intent.session_id and result.decision.decision not in (DECISION_SKIPPED,):
             self.state.begin_turn(intent.session_id, intent.turn_id, mode=cfg.mode,
-                                  decision=result.decision.decision, allowed=result.allowed)
+                                  decision=result.decision.decision, allowed=result.allowed,
+                                  allowed_aliases=result.allowed_aliases)
         result.trace = self.trace.write("route.decision", intent.session_id, {
             "turn_id": intent.turn_id, "platform": intent.platform, "mode": cfg.mode,
             "intent_hash": intent.intent_hash, "intent_preview": intent.text[:PREVIEW_CHARS],
@@ -234,11 +244,13 @@ class Router:
                        "message": "No additional skill applies; continue with general tools.",
                        "considered": [c.manifest.name for c in result.candidates[:5]]}
         if turn is not None:
-            new_allowed = result.decision.selected_names()
+            new_allowed = result.allowed
+            new_aliases = result.allowed_aliases
 
             def _apply(t: TurnState) -> None:
                 t.reroutes += 1
                 t.allowed = list(dict.fromkeys(t.allowed + new_allowed))
+                t.allowed_aliases = list(dict.fromkeys(t.allowed_aliases + new_aliases))
             self.state.update(session_id, _apply)
         self.trace.write("route.reroute", session_id, {
             "turn_id": turn.turn_id if turn else "", "requirement_preview": requirement[:PREVIEW_CHARS],
@@ -257,10 +269,18 @@ class Router:
 
     @staticmethod
     def _matches(name: str, allowed: Sequence[str]) -> bool:
-        if name in allowed:
-            return True
-        tail = name.rsplit("/", 1)[-1].rsplit(":", 1)[-1]
-        return any(a == tail or a.rsplit("/", 1)[-1].rsplit(":", 1)[-1] == tail for a in allowed)
+        return name in allowed
+
+    @staticmethod
+    def _canonical_load_name(name: str, turn: TurnState) -> str:
+        """Collapse an authorized category alias to its selected canonical skill name."""
+        if name in turn.allowed:
+            return name
+        if name in turn.allowed_aliases and "/" in name:
+            canonical = name.rsplit("/", 1)[-1]
+            if canonical in turn.allowed:
+                return canonical
+        return name
 
     def before_skill_view(self, *, args: Dict[str, Any], session_id: str, turn_id: str = "") -> Optional[Dict[str, str]]:
         """``pre_tool_call`` decision for ``skill_view``: a block directive in active mode, else None."""
@@ -271,7 +291,7 @@ class Router:
             return None
         if turn.decision in (DECISION_PINNED, DECISION_SKIPPED):
             return None
-        selected = self._matches(name, turn.allowed) or self._matches(name, turn.loads)
+        selected = self._matches(name, turn.allowed_aliases) or self._matches(name, turn.loads)
         over_budget = len(turn.loads) >= cfg.max_skills_per_turn and not self._matches(name, turn.loads)
         if cfg.mode != "active" or (selected and not over_budget):
             return None
@@ -295,13 +315,14 @@ class Router:
         if status and str(status).lower() in ("error", "failed", "cancelled", "blocked"):
             return
         turn = self.state.current(session_id)
-        selected = bool(turn and (self._matches(name, turn.allowed)))
+        selected = bool(turn and self._matches(name, turn.allowed_aliases))
+        stored_name = self._canonical_load_name(name, turn) if turn else name
         if turn is not None:
             def _apply(t: TurnState) -> None:
-                if name not in t.loads:
-                    t.loads.append(name)
-                if not selected and name not in t.unselected_loads:
-                    t.unselected_loads.append(name)
+                if stored_name not in t.loads:
+                    t.loads.append(stored_name)
+                if not selected and stored_name not in t.unselected_loads:
+                    t.unselected_loads.append(stored_name)
             self.state.update(session_id, _apply)
         self.trace.write("skill.load", session_id, {
             "turn_id": turn.turn_id if turn else turn_id, "name": name, "selected": selected,

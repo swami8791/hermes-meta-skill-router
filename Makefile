@@ -9,6 +9,7 @@ help:
 	@echo "make install    copy the plugin to $(PLUGIN_DST)"
 	@echo "make uninstall  remove it"
 	@echo "make test       run the suite (needs HERMES_AGENT_SRC or a sibling ../hermes-agent checkout)"
+	@echo "make lint       run Ruff over the plugin and tests"
 	@echo "make clean      remove caches"
 
 install:
@@ -25,6 +26,9 @@ uninstall:
 
 test:
 	$(PYTHON) -m pytest -q
+
+lint:
+	$(PYTHON) -m ruff check $(PLUGIN_SRC) tests
 
 clean:
 	@find . -name __pycache__ -type d -prune -exec rm -rf {} +

@@ -2,8 +2,6 @@
 
 import sys
 
-import pytest
-
 
 def _entries(router_mod, skills_home):
     return {m.name: m for m in router_mod.catalog.SkillCatalog(include_plugin_skills=False).entries("cli")}

@@ -43,5 +43,5 @@ Tests never touch `~/.hermes`; each test gets a temporary `HERMES_HOME`.
 
 ## Bumping the Hermes pin
 
-Update the SHA in `.github/workflows/tests.yml`, `CONTRIBUTING.md`, and the badge in `README.md`,
+Update the SHA in `.github/workflows/tests.yml`, search the repository for references to the old SHA,
 run the suite, and note any Hermes API drift in the changelog.

@@ -3,13 +3,18 @@ Hermes PluginManager discovery + hook dispatch path."""
 
 import json
 import shutil
-import sys
 
-import pytest
+import yaml
 
 from conftest import FakeCtx, FakeLlm, PLUGIN_DIR, SELECT_ARXIV, write_config
 
 PAPERS = "Find three recent arXiv papers about sparse attention and summarize them"
+
+
+def test_plugin_schema_exposes_security_and_routing_switches():
+    schema = yaml.safe_load((PLUGIN_DIR / "plugin.yaml").read_text())["config_schema"]
+    assert schema["allow_untrusted"]["default"] is False
+    assert schema["route_aux_task"]["default"] is True
 
 
 def test_register_wires_hooks_tool_command_and_aux_task(plugin, hermes_home):
@@ -97,6 +102,6 @@ def test_real_plugin_manager_discovers_and_dispatches(hermes, hermes_home, skill
     mgr.invoke_hook("on_session_end", session_id="sess-real", completed=True)
     traces = list((hermes_home / "plugin-data").rglob("sess-real.jsonl"))
     assert traces, "trace file missing"
-    kinds = [json.loads(l)["kind"] for l in traces[0].read_text().splitlines()]
+    kinds = [json.loads(line)["kind"] for line in traces[0].read_text().splitlines()]
     assert kinds[0] == "route.decision" and "turn.close" in kinds
     mgr.unload() if hasattr(mgr, "unload") else None

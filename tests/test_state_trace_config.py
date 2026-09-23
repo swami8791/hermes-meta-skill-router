@@ -61,6 +61,8 @@ def test_config_coercion_and_defaults(router_mod):
     assert cfg.max_selected == 3 and cfg.directive_max_chars == 1500  # invalid -> defaults
     bad = C.load(lambda k, d: "sideways" if k == "mode" else d)
     assert bad.mode == "shadow"
+    bad_bools = C.load(lambda k, d: "definitely" if k in {"trace_enabled", "route_aux_task"} else d)
+    assert bad_bools.trace_enabled is True and bad_bools.route_aux_task is True
 
 
 def test_directive_rendering_and_pin_detection(router_mod):

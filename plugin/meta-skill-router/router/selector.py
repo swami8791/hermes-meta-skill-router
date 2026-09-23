@@ -9,7 +9,7 @@ from __future__ import annotations
 import json
 import logging
 import re
-from typing import Any, Callable, Dict, List, Optional, Sequence
+from typing import Any, Dict, List, Optional, Sequence
 
 from .schemas import (
     Candidate, DECISION_GAP, DECISION_NO_SKILL, DECISION_SELECT, LLM_DECISIONS, RoutingDecision, SelectedSkill,

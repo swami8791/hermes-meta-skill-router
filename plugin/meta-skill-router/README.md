@@ -52,7 +52,7 @@ plugin toolset; `hermes tools` lists it).
 `mode`, `max_candidates` (12), `max_selected` (3), `max_skills_per_turn` (5), `max_reroutes_per_turn`
 (1), `skip_platforms` (`[subagent]`), `min_message_chars` (12), `selection_timeout_s` (8),
 `directive_max_chars` (1500), `trace_enabled` (true), `trace_max_bytes` (5 MiB), `protocol_section`
-(false), `allow_untrusted` (false). The selector runs through the auxiliary task `meta_skill_router`
+(false), `allow_untrusted` (false), `route_aux_task` (true). By default the selector runs through the auxiliary task `meta_skill_router`
 (`auxiliary.meta_skill_router.*` in `config.yaml`) so a cheaper model can be pinned.
 
 ## Traces

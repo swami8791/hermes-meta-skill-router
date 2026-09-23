@@ -1,10 +1,5 @@
 """Frontmatter -> SkillManifest adapter (plan 8.3)."""
 
-from pathlib import Path
-
-from conftest import FIXTURE_SKILLS
-
-
 def test_bundled_style_frontmatter_maps_all_routing_fields(router_mod, skills_home):
     m, n = router_mod.manifest.manifest_from_path(skills_home / "productivity" / "notion" / "SKILL.md", root=skills_home, source="local")
     assert m.name == "notion"
@@ -55,13 +50,20 @@ def test_category_rules_match_prompt_builder(router_mod, tmp_path):
     assert cat(tmp_path / "_org" / "org1" / "a" / "b" / "SKILL.md", tmp_path) == "a"
 
 
-def test_malformed_frontmatter_still_yields_listable_manifest(router_mod, tmp_path):
+def test_missing_or_malformed_frontmatter_never_uses_body_as_metadata(router_mod, tmp_path):
     d = tmp_path / "weird"
     d.mkdir()
     (d / "SKILL.md").write_text("# No frontmatter here\n\nFirst useful line of the body.\n")
     m, _ = router_mod.manifest.manifest_from_path(d / "SKILL.md", root=tmp_path, source="local")
     assert m.name == "weird"
-    assert m.description == "First useful line of the body."
+    assert m.description == ""
+
+    d2 = tmp_path / "missing-description"
+    d2.mkdir()
+    (d2 / "SKILL.md").write_text("---\nname: missing-description\n---\nBODY_INSTRUCTION_SHOULD_NOT_BE_METADATA\n")
+    m2, _ = router_mod.manifest.manifest_from_path(d2 / "SKILL.md", root=tmp_path, source="local")
+    assert m2.description == ""
+    assert "BODY_INSTRUCTION" not in str(m2.frontmatter)
 
 
 def test_fallback_parser_handles_lists_and_bad_yaml(router_mod):
@@ -79,6 +81,7 @@ def test_head_read_extends_when_fence_is_late(router_mod, tmp_path):
     assert n > router_mod.manifest.HEAD_BYTES
     fm, _ = router_mod.manifest.parse_frontmatter(text)
     assert fm["name"] == "long"
+    assert "body" not in text
 
 
 def test_plugin_entry_manifest(router_mod):

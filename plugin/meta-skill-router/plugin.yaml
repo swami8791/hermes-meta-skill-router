@@ -60,3 +60,11 @@ config_schema:
     type: bool
     default: false
     description: "Register a static after-memory system prompt note describing the routing protocol"
+  allow_untrusted:
+    type: bool
+    default: false
+    description: "Allow untrusted skills into the selector; quarantined skills remain blocked"
+  route_aux_task:
+    type: bool
+    default: true
+    description: "Route selector calls through the registered meta_skill_router auxiliary task"

@@ -2,8 +2,6 @@
 
 import os
 import time
-from pathlib import Path
-
 
 def _names(entries):
     return sorted(m.name for m in entries)

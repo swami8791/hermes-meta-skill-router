@@ -71,9 +71,16 @@ class Index:
     def __init__(self, manifests: Sequence[SkillManifest]) -> None:
         self.manifests = list(manifests)
         self.docs = [document_tokens(m) for m in self.manifests]
+        self.term_freqs = [Counter(d) for d in self.docs]
+        self.doc_sets = [set(d) for d in self.docs]
         self.doc_lengths = [len(d) for d in self.docs]
         self.avg_dl = sum(self.doc_lengths) / max(len(self.doc_lengths), 1)
-        self.doc_freq: Dict[str, int] = dict(Counter(t for d in self.docs for t in set(d)))
+        self.doc_freq: Dict[str, int] = dict(Counter(t for d in self.doc_sets for t in d))
+        self.postings: Dict[str, List[int]] = {}
+        for i, tokens in enumerate(self.doc_sets):
+            for token in tokens:
+                self.postings.setdefault(token, []).append(i)
+        self.names_lower = [m.name.lower() for m in self.manifests]
         self.n_docs = len(self.docs)
         self.fingerprint = tuple((m.name, m.fingerprint) for m in self.manifests)
 
@@ -82,9 +89,8 @@ class Index:
         return math.log(1 + (self.n_docs - df + 0.5) / (df + 0.5))
 
     def _score(self, query_tokens: List[str], doc_index: int) -> float:
-        doc = self.docs[doc_index]
         dl = self.doc_lengths[doc_index]
-        tf_map = Counter(doc)
+        tf_map = self.term_freqs[doc_index]
         score = 0.0
         for q in query_tokens:
             tf = tf_map.get(q, 0)
@@ -100,16 +106,19 @@ class Index:
         max_df = max(1, int(self.n_docs * DISTINCTIVE_DF_SHARE))
         distinctive = {t for t in query_tokens if 0 < self.doc_freq.get(t, 0) <= max_df}
         q_lower = query.lower()
+        candidate_ids = {i for token in distinctive for i in self.postings.get(token, ())}
+        mentioned: set = set()
+        for i, name in enumerate(self.names_lower):
+            if name in q_lower and _name_mentioned(name, q_lower):
+                candidate_ids.add(i)
+                mentioned.add(i)
         scored: List[Tuple[float, int]] = []
-        for i, m in enumerate(self.manifests):
+        for i in candidate_ids:
+            m = self.manifests[i]
             if m.name in exclude:
                 continue
-            doc_set = set(self.docs[i])
-            name_mentioned = _name_mentioned(m.name, q_lower)
-            if not name_mentioned and not (distinctive & doc_set):
-                continue
             s = self._score(query_tokens, i)
-            if name_mentioned:
+            if i in mentioned:
                 s += 100.0  # a whole-word mention of the skill name always surfaces
             if s > 0:
                 scored.append((s, i))

@@ -11,7 +11,7 @@ import hashlib
 import logging
 import os
 from pathlib import Path
-from typing import Any, Dict, Iterable, List, Optional, Tuple
+from typing import Any, Dict, Iterable, List, Tuple
 
 from .schemas import (
     SkillManifest, TRUST_APPROVED, TRUST_APPROVED_LOCAL, TRUST_CORE, TRUST_QUARANTINED, TRUST_UNTRUSTED,
@@ -33,12 +33,24 @@ _TRUST_RANK = {TRUST_QUARANTINED: 0, TRUST_UNTRUSTED: 1, TRUST_APPROVED_LOCAL: 2
 # ---------------------------------------------------------------------------
 
 def read_head(path: Path) -> Tuple[str, int]:
-    """Return ``(text, bytes_read)`` for the frontmatter head of *path*."""
-    with open(path, "rb") as fh:
-        raw = fh.read(HEAD_BYTES)
-        if b"\n---" not in raw[3:]:
-            raw += fh.read(HEAD_BYTES_MAX - HEAD_BYTES)
-    return raw.decode("utf-8", "replace"), len(raw)
+    """Return only the frontmatter fence and its byte count; never retain body text."""
+    lines: List[bytes] = []
+    total = 0
+    with open(path, "rb", buffering=0) as fh:
+        first = fh.readline(HEAD_BYTES_MAX + 1)
+        total += len(first)
+        if first.lstrip(b"\xef\xbb\xbf").rstrip(b"\r\n") != b"---":
+            return "", total
+        lines.append(first)
+        while total < HEAD_BYTES_MAX:
+            line = fh.readline(HEAD_BYTES_MAX - total + 1)
+            if not line:
+                break
+            total += len(line)
+            lines.append(line)
+            if line.rstrip(b"\r\n") == b"---":
+                return b"".join(lines).decode("utf-8", "replace"), total
+    return b"".join(lines).decode("utf-8", "replace"), total
 
 
 def parse_frontmatter(text: str) -> Tuple[Dict[str, Any], str]:
@@ -110,14 +122,6 @@ def _commands(fm: Dict[str, Any]) -> List[str]:
     return _as_list(prereq.get("commands")) if isinstance(prereq, dict) else []
 
 
-def first_body_line(body: str) -> str:
-    for line in body.strip().splitlines():
-        line = line.strip()
-        if line and not line.startswith("#"):
-            return line
-    return ""
-
-
 # ---------------------------------------------------------------------------
 # Provenance and trust
 # ---------------------------------------------------------------------------
@@ -181,13 +185,11 @@ def category_for(skill_md: Path, root: Path) -> str:
 
 
 def manifest_from_frontmatter(
-    fm: Dict[str, Any], body: str, *, path: Path, source: str, category: str = "", disabled: bool = False,
+    fm: Dict[str, Any], _body: str, *, path: Path, source: str, category: str = "", disabled: bool = False,
 ) -> SkillManifest:
     skill_dir = path.parent
     raw_name = str(fm.get("name") or skill_dir.name).strip()[:MAX_NAME_LENGTH]
     description = str(fm.get("description") or "").strip().strip("'\"")
-    if not description:
-        description = first_body_line(body)
     if len(description) > MAX_DESCRIPTION_LENGTH:
         description = description[: MAX_DESCRIPTION_LENGTH - 3] + "..."
     hm = _hermes_meta(fm)

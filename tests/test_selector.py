@@ -1,8 +1,6 @@
 """Selector: prompt construction, validation, fail-open."""
 
-import json
-
-from conftest import FakeLlm, GAP, NO_SKILL, SELECT_ARXIV, SELECT_TWO
+from conftest import FakeLlm, GAP, NO_SKILL, SELECT_TWO
 
 
 def _cands(router_mod, skills_home, hermes, query="find papers and save notes"):

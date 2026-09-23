@@ -27,13 +27,15 @@ def _atomic_write(path: Path, data: Dict[str, Any]) -> None:
 
 
 class TurnState:
-    __slots__ = ("turn_id", "decision", "allowed", "reroutes", "loads", "unselected_loads", "mode", "started")
+    __slots__ = ("turn_id", "decision", "allowed", "allowed_aliases", "reroutes", "loads", "unselected_loads", "mode", "started")
 
-    def __init__(self, turn_id: str, *, mode: str, decision: str, allowed: List[str]) -> None:
+    def __init__(self, turn_id: str, *, mode: str, decision: str, allowed: List[str],
+                 allowed_aliases: Optional[List[str]] = None) -> None:
         self.turn_id = turn_id
         self.mode = mode
         self.decision = decision
         self.allowed = list(dict.fromkeys(allowed))
+        self.allowed_aliases = list(dict.fromkeys(allowed_aliases if allowed_aliases is not None else allowed))
         self.reroutes = 0
         self.loads: List[str] = []
         self.unselected_loads: List[str] = []
@@ -41,13 +43,14 @@ class TurnState:
 
     def to_dict(self) -> Dict[str, Any]:
         return {"turn_id": self.turn_id, "mode": self.mode, "decision": self.decision, "allowed": self.allowed,
+                "allowed_aliases": self.allowed_aliases,
                 "reroutes": self.reroutes, "loads": self.loads, "unselected_loads": self.unselected_loads,
                 "started": self.started}
 
     @classmethod
     def from_dict(cls, d: Dict[str, Any]) -> "TurnState":
         t = cls(str(d.get("turn_id", "")), mode=str(d.get("mode", "shadow")), decision=str(d.get("decision", "")),
-                allowed=list(d.get("allowed") or []))
+                allowed=list(d.get("allowed") or []), allowed_aliases=list(d.get("allowed_aliases") or d.get("allowed") or []))
         t.reroutes = int(d.get("reroutes") or 0)
         t.loads = list(d.get("loads") or [])
         t.unselected_loads = list(d.get("unselected_loads") or [])
@@ -108,10 +111,11 @@ class RouterState:
             self._touched.pop(oldest, None)
 
     # -- API --------------------------------------------------------------
-    def begin_turn(self, session_id: str, turn_id: str, *, mode: str, decision: str, allowed: List[str]) -> TurnState:
+    def begin_turn(self, session_id: str, turn_id: str, *, mode: str, decision: str, allowed: List[str],
+                   allowed_aliases: Optional[List[str]] = None) -> TurnState:
         with self._lock:
             self._load()
-            t = TurnState(turn_id, mode=mode, decision=decision, allowed=allowed)
+            t = TurnState(turn_id, mode=mode, decision=decision, allowed=allowed, allowed_aliases=allowed_aliases)
             self._sessions[session_id] = t
             self._touched[session_id] = time.time()
             self._evict()

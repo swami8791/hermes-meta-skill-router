@@ -4,7 +4,7 @@
 
 **Your agent has skills. This decides which ones earn context.**
 
-[![Hermes Plugin](https://img.shields.io/badge/Hermes-Plugin-D97757?style=for-the-badge)](#install)
+[![Hermes Plugin](https://img.shields.io/badge/Hermes-Plugin-D97757?style=for-the-badge)](#quick-start)
 [![License: MIT](https://img.shields.io/badge/License-MIT-14B8A6?style=for-the-badge)](LICENSE)
 [![Python 3.11+](https://img.shields.io/badge/Python-3.11%2B-3B82F6?style=for-the-badge)](#development)
 [![Decision path](https://img.shields.io/badge/decision_path-hybrid-8B5CF6?style=for-the-badge)](#how-it-works)
@@ -143,6 +143,7 @@ All settings live under `plugins.entries.meta-skill-router.settings`:
 | `trace_enabled` / `trace_max_bytes` | `true` / 5 MiB | per-session JSONL trace and its trim size |
 | `protocol_section` | `false` | register a static after-memory prompt note describing the protocol |
 | `allow_untrusted` | `false` | let untrusted skills reach the selector |
+| `route_aux_task` | `true` | run selection through the registered `meta_skill_router` auxiliary task |
 
 The selector runs through the auxiliary task `meta_skill_router`, so a cheaper model can be pinned
 under `auxiliary.meta_skill_router` in `config.yaml`.
@@ -186,11 +187,11 @@ under `auxiliary.meta_skill_router` in `config.yaml`.
 
 ```bash
 export HERMES_AGENT_SRC=/path/to/hermes-agent   # checkout of NousResearch/hermes-agent @ 2332a64
-make test                                        # 70 tests, ~10 s
+make test                                        # 70+ tests, typically under a minute
 ```
 
 CI clones hermes-agent at the pinned commit, installs it with `uv sync --frozen --extra dev`, and
-runs the same suite. Bump the pin in `.github/workflows/tests.yml` and the badge above together.
+runs the same suite. When bumping it, update every documented reference to the old SHA.
 
 ## Status and roadmap
 
