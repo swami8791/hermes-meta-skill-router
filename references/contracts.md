@@ -53,7 +53,26 @@ discovery:
   replacement: null
 ```
 
-Keep reliability outside the manifest. Missing security metadata makes autonomous execution ineligible.
+Keep reliability outside the manifest.
+
+## Manifest derivation from SKILL.md frontmatter
+
+Real Hermes skills carry no `skill.manifest.yaml` (none of 208 shipped skills does), so the routing
+manifest is **derived** from `SKILL.md` frontmatter, and this file is an optional overlay placed next
+to `SKILL.md`:
+
+| Manifest field | Derived from |
+|---|---|
+| `identity.name`, `description`, `version` | frontmatter `name`, `description` (≤1,024 chars), `version` |
+| `routing.capabilities`, `intents`, `positive_triggers` | `metadata.hermes.tags`, `tags`, `triggers`, category path |
+| `requirements.tools` | `metadata.hermes.requires_tools` / `requires_toolsets`; `fallback_for_*` are negative conditions |
+| `requirements.credentials` | `prerequisites.env_vars`, `required_environment_variables`, `required_credential_files` |
+| `requirements.platforms` | `platforms`, `environments`, `requires_apps`, `metadata.hermes.session_platforms` |
+| `security.trust_requirement` | provenance: bundled → core; hub/plugin → approved; agent/project/external/local → approved-local; unknown → untrusted |
+
+An overlay may add capabilities, intents, tools, and credentials and may **lower** trust; it can never
+raise trust or bypass Hermes' disable lists, quarantine, or platform gates. Missing security metadata
+does not make a skill ineligible; eligibility is decided from provenance and Hermes' own gates.
 
 ## Artifact envelope
 

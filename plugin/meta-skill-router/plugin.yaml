@@ -1,0 +1,62 @@
+name: meta-skill-router
+version: "0.1.0"
+description: "Routes each turn to the smallest set of installed skills: frontmatter catalog, BM25 shortlist, one structured LLM selection, directive injection, skill_view gating, one bounded reroute, JSONL traces. Default mode is shadow (trace only, zero prompt bytes)."
+author: nehal-swami
+license: MIT
+kind: standalone
+provides_hooks:
+  - pre_llm_call
+  - pre_tool_call
+  - post_tool_call
+  - on_session_end
+provides_tools:
+  - skill_route
+config_schema:
+  mode:
+    type: str
+    default: shadow
+    description: "shadow (trace only) | advisory (inject directive) | active (directive + skill_view gating)"
+  max_candidates:
+    type: int
+    default: 12
+    description: "Shortlist size passed to the selector"
+  max_selected:
+    type: int
+    default: 3
+    description: "Maximum skills one decision may select"
+  max_skills_per_turn:
+    type: int
+    default: 5
+    description: "Total skills allowed to load in one turn across the decision and reroutes"
+  max_reroutes_per_turn:
+    type: int
+    default: 1
+    description: "skill_route calls honoured per turn"
+  skip_platforms:
+    type: list
+    default: ["subagent"]
+    description: "Session platforms the router ignores"
+  min_message_chars:
+    type: int
+    default: 12
+    description: "Shorter user messages are not routed"
+  selection_timeout_s:
+    type: int
+    default: 8
+    description: "Selector LLM timeout; on expiry the decision is NO_SKILL"
+  directive_max_chars:
+    type: int
+    default: 1500
+    description: "Hard cap on the injected directive"
+  trace_enabled:
+    type: bool
+    default: true
+    description: "Write JSONL traces under plugin-data/meta-skill-router/traces"
+  trace_max_bytes:
+    type: int
+    default: 5242880
+    description: "Per-session trace file cap; oldest records are trimmed"
+  protocol_section:
+    type: bool
+    default: false
+    description: "Register a static after-memory system prompt note describing the routing protocol"

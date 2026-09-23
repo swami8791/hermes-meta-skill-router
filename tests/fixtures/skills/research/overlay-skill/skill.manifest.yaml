@@ -1,0 +1,11 @@
+schema_version: "1.0"
+identity:
+  id: "acme.overlay-skill"
+  version: "2.0.0"
+routing:
+  capabilities: ["pricing.comparison"]
+  intents: ["Compare competitor pricing"]
+requirements:
+  tools: ["web_search"]
+security:
+  trust_requirement: "untrusted"

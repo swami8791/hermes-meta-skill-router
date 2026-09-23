@@ -9,6 +9,16 @@ Pre-implementation analysis. No production code, no package installs, no behavio
 | Method | direct reads of the agent loop, tool registry, skills tooling, plugin surface, state DB, approval and logging modules; three parallel read-only surveys; counts measured with shell one-liners |
 | Line references | `path:line` refer to the Hermes commit above unless the path starts with `references/` or `SKILL.md` (this repo) |
 
+> **Implementation status.** The MVP in sections 8–9 is implemented as the plugin under
+> `plugin/meta-skill-router/` with tests under `tests/` (run against the pinned Hermes commit by
+> `.github/workflows/tests.yml`). Decisions U1, U2, U3 were taken as recommended: plugin-first,
+> default mode `shadow`, upstream `pre_llm_call` kwarg proposed after the plugin exists. Two details
+> changed during implementation and are reflected in the code and README: the retrieval admission
+> rule uses "any distinctive query token" instead of Hermes' single rarest-token gate (which rejects
+> multi-skill requests), and "explicit mention" promotion requires the user to name a skill *as a
+> skill* (hyphenated/namespaced identifier, "use X", "the X skill", `/X`), not a bare word that
+> happens to match a skill name.
+
 ---
 
 ## 1. Executive summary
