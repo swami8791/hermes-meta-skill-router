@@ -1,0 +1,70 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 860 540" width="860" height="540" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#12141a"/>
+      <stop offset="100%" stop-color="#0b0d11"/>
+    </linearGradient>
+    <filter id="sh" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="8" stdDeviation="14" flood-color="#000" flood-opacity="0.55"/>
+    </filter>
+  </defs>
+
+  <rect x="14" y="10" width="832" height="520" rx="12" fill="url(#bg)" filter="url(#sh)"/>
+  <rect x="14" y="10" width="832" height="36" rx="12" fill="#1b1e26"/>
+  <rect x="14" y="34" width="832" height="12" fill="#1b1e26"/>
+  <circle cx="38" cy="28" r="6" fill="#ff5f57"/>
+  <circle cx="58" cy="28" r="6" fill="#febc2e"/>
+  <circle cx="78" cy="28" r="6" fill="#28c840"/>
+  <text x="430" y="33" fill="#6b7280" font-size="12.5" text-anchor="middle">hermes-router — dry run</text>
+
+  <g font-size="13.5">
+    <text x="36" y="78"><tspan fill="#4ade80">&gt;</tspan><tspan fill="#e5e7eb"> /route dry-run find recent sparse-attention papers and save a note</tspan></text>
+
+    <text x="36" y="118" fill="#64748b">DISCOVER</text>
+    <text x="150" y="118" fill="#e5e7eb">current skill registry</text>
+    <text x="822" y="118" fill="#38bdf8" text-anchor="end">METADATA ONLY</text>
+
+    <text x="36" y="150" fill="#64748b">FILTER</text>
+    <text x="150" y="150" fill="#e5e7eb">trust · tools · platform · prerequisites</text>
+    <text x="822" y="150" fill="#4ade80" text-anchor="end">ELIGIBLE</text>
+
+    <text x="36" y="182" fill="#64748b">SHORTLIST</text>
+    <text x="150" y="182" fill="#e5e7eb">ranked candidates</text>
+    <text x="822" y="182" fill="#8b5cf6" text-anchor="end">6 / 12 MAX</text>
+
+    <text x="36" y="214" fill="#64748b">DECISION</text>
+    <text x="150" y="214" fill="#e5e7eb">SELECT_SKILLS</text>
+    <text x="822" y="214" fill="#fbbf24" text-anchor="end">2 SELECTED</text>
+  </g>
+
+  <rect x="36" y="244" width="788" height="148" rx="8" fill="#10131a" stroke="#334155"/>
+  <g font-size="13">
+    <text x="56" y="276" fill="#94a3b8">01</text>
+    <text x="100" y="276" fill="#38bdf8">research-skill</text>
+    <text x="280" y="276" fill="#475569">produces</text>
+    <text x="375" y="276" fill="#e5e7eb">sources</text>
+
+    <text x="56" y="310" fill="#94a3b8">02</text>
+    <text x="100" y="310" fill="#8b5cf6">note-skill</text>
+    <text x="280" y="310" fill="#475569">consumes</text>
+    <text x="375" y="310" fill="#e5e7eb">sources</text>
+    <text x="760" y="310" fill="#64748b" text-anchor="end">after 01</text>
+
+    <text x="56" y="350" fill="#64748b">full skill bodies loaded</text>
+    <text x="760" y="350" fill="#4ade80" text-anchor="end">2 — selected only</text>
+    <text x="56" y="376" fill="#64748b">recovery budget</text>
+    <text x="760" y="376" fill="#fbbf24" text-anchor="end">1 bounded reroute</text>
+  </g>
+
+  <g font-size="13">
+    <text x="36" y="432" fill="#4ade80">READY</text>
+    <text x="100" y="432" fill="#e5e7eb">minimum trusted plan covers the request</text>
+    <text x="822" y="432" fill="#4ade80" text-anchor="end">PASS</text>
+
+    <text x="36" y="470" fill="#64748b">trace</text>
+    <text x="100" y="470" fill="#475569">decision · rejections · loads · reroutes</text>
+    <text x="822" y="470" fill="#64748b" text-anchor="end">SECRETS REDACTED</text>
+
+    <text x="36" y="506" fill="#334155" font-size="11.5">discover broadly. load narrowly. explain every choice.</text>
+  </g>
+</svg>
