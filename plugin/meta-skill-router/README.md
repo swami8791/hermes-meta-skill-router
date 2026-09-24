@@ -39,6 +39,12 @@ plugins:
 Enable the `meta_skill_router` toolset for platforms that should expose `skill_route` (it is a normal
 plugin toolset; `hermes tools` lists it).
 
+## Governance registry
+
+The optional `registry/capability_registry.json` is an **overlay only**. Hermes runtime discovery remains the inventory source of truth: the registry cannot create a candidate that is not actually installed/discovered. It only adds canonical capability IDs, aliases, routing boundaries, and policy to manifests already found by the catalog. Policies such as `exclude` or `blocked_until_audited` mark a discovered skill ineligible for automatic routing.
+
+This keeps the router dynamic while letting the audited skills registry clean up aliases and prevent ambiguous or unreviewed skills from being selected automatically.
+
 ## Modes
 
 | Mode | Prompt bytes added | `skill_view` gating | Use |
