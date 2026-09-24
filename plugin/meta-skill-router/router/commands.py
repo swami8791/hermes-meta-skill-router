@@ -11,6 +11,20 @@ from .engine import Router
 from .schemas import TaskIntent
 
 USAGE = "Usage: /route dry-run <request text> | /route catalog | /route stats"
+STATS_MAX_FILES = 100
+STATS_MAX_BYTES = 25 * 1024 * 1024
+
+
+def _tail_lines(path: Path, max_bytes: int):
+    """Yield complete lines from at most the last *max_bytes* of a trace file."""
+    size = path.stat().st_size
+    start = max(0, size - max_bytes)
+    with path.open("rb") as fh:
+        fh.seek(start)
+        if start:
+            fh.readline()  # discard the partial first record
+        for raw in fh:
+            yield raw.decode("utf-8", "replace")
 
 
 def make_handler(router: Router):
@@ -50,8 +64,17 @@ def _stats(router: Router) -> str:
         return "No traces yet."
     decisions: Counter = Counter()
     loads = unselected = reroutes = turns = 0
-    for f in sorted(Path(trace_dir).glob("*.jsonl")):
-        for line in f.read_text(encoding="utf-8").splitlines():
+    files = sorted(Path(trace_dir).glob("*.jsonl"), key=lambda p: p.stat().st_mtime, reverse=True)
+    sampled = len(files) > STATS_MAX_FILES
+    remaining_bytes = STATS_MAX_BYTES
+    for f in files[:STATS_MAX_FILES]:
+        if remaining_bytes <= 0:
+            sampled = True
+            break
+        file_bytes = min(f.stat().st_size, remaining_bytes)
+        sampled = sampled or file_bytes < f.stat().st_size
+        remaining_bytes -= file_bytes
+        for line in _tail_lines(f, file_bytes):
             try:
                 rec = json.loads(line)
             except ValueError:
@@ -65,6 +88,7 @@ def _stats(router: Router) -> str:
                 unselected += 0 if rec.get("selected") else 1
             elif kind == "route.reroute" and rec.get("status") == "ok":
                 reroutes += 1
-    lines = [f"routed turns: {turns}", "decisions: " + ", ".join(f"{k}={v}" for k, v in sorted(decisions.items())),
+    lines = [f"routed turns: {turns}" + (" (recent trace sample)" if sampled else ""),
+             "decisions: " + ", ".join(f"{k}={v}" for k, v in sorted(decisions.items())),
              f"skill loads: {loads} (unselected: {unselected})", f"reroutes: {reroutes}"]
     return "\n".join(lines)

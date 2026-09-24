@@ -28,6 +28,31 @@ def test_state_with_callable_dir_and_memory_only(router_mod, tmp_path):
     assert mem.current("s").turn_id == "t" and mem.end_turn("s") is not None and mem.current("s") is None
 
 
+def test_state_callable_dir_isolates_profile_switches(router_mod, tmp_path):
+    S = router_mod.state
+    current = [tmp_path / "profile-a"]
+    st = S.RouterState(lambda: current[0])
+    st.begin_turn("s", "a:t1", mode="active", decision="SELECT_SKILLS", allowed=["arxiv"])
+
+    current[0] = tmp_path / "profile-b"
+    assert st.current("s") is None
+    st.begin_turn("s", "b:t1", mode="active", decision="NO_SKILL", allowed=[])
+
+    current[0] = tmp_path / "profile-a"
+    assert st.current("s").turn_id == "a:t1"
+    assert json.loads((tmp_path / "profile-b" / "router-state.json").read_text())["sessions"]["s"]["turn_id"] == "b:t1"
+
+
+def test_reroute_reservation_is_bounded(router_mod):
+    S = router_mod.state
+    st = S.RouterState()
+    st.begin_turn("s", "t", mode="active", decision="NO_SKILL", allowed=[])
+    turn, reserved = st.reserve_reroute("s", 1)
+    assert reserved and turn.reroutes == 1
+    turn, reserved = st.reserve_reroute("s", 1)
+    assert not reserved and turn.reroutes == 1
+
+
 def test_trace_trims_oldest_first(router_mod, tmp_path):
     w = router_mod.trace.TraceWriter(tmp_path, max_bytes=64 * 1024)
     for i in range(1500):
@@ -43,6 +68,21 @@ def test_trace_disabled_returns_record_without_writing(router_mod, tmp_path):
     w = router_mod.trace.TraceWriter(tmp_path, enabled=False)
     rec = w.write("turn.close", "sess", {"a": 1})
     assert rec["kind"] == "turn.close" and not (tmp_path / "traces").exists()
+
+
+def test_stats_caps_files_and_labels_sample(router_mod, tmp_path, monkeypatch):
+    writer = router_mod.trace.TraceWriter(tmp_path)
+    writer.write("route.decision", "older", {"decision": {"decision": "NO_SKILL"}})
+    time.sleep(0.01)
+    writer.write("route.decision", "newer", {"decision": {"decision": "SELECT_SKILLS"}})
+    monkeypatch.setattr(router_mod.commands, "STATS_MAX_FILES", 1)
+
+    class _Router:
+        trace = writer
+
+    stats = router_mod.commands._stats(_Router())
+    assert "routed turns: 1 (recent trace sample)" in stats
+    assert "SELECT_SKILLS=1" in stats and "NO_SKILL" not in stats
 
 
 def test_trace_fallback_redaction(router_mod):

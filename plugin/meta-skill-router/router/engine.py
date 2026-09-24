@@ -209,17 +209,21 @@ class Router:
                 platform: str = "") -> Dict[str, Any]:
         """One bounded reroute for the current turn. Returns a tool-result dict."""
         cfg = self.config
-        turn = self.state.current(session_id) if session_id else None
         requirement = (remaining_requirement or "").strip()
         if not requirement:
             return {"success": False, "error": "remaining_requirement is required"}
-        if turn is not None and turn.reroutes >= cfg.max_reroutes_per_turn:
+        turn, reserved = self.state.reserve_reroute(session_id, cfg.max_reroutes_per_turn) if session_id else (None, False)
+        if turn is None:
+            self.trace.write("route.reroute", session_id, {"turn_id": "", "status": "no_active_turn"})
+            return {"success": False, "error": "no_active_turn",
+                    "message": "skill_route is only available during an actively routed turn."}
+        if not reserved:
             self.trace.write("route.reroute", session_id, {"turn_id": turn.turn_id, "status": "budget_exhausted"})
             return {"success": False, "error": "budget_exhausted",
                     "message": f"Routing budget for this turn is used ({turn.reroutes}/{cfg.max_reroutes_per_turn}). "
                                "Proceed with the skills already loaded or ask the user."}
-        exclude = set(tried_skills or []) | (set(turn.loads) | set(turn.allowed) if turn else set())
-        intent = TaskIntent(text=requirement, session_id=session_id, turn_id=turn.turn_id if turn else "", platform=platform)
+        exclude = set(tried_skills or []) | set(turn.loads) | set(turn.allowed)
+        intent = TaskIntent(text=requirement, session_id=session_id, turn_id=turn.turn_id, platform=platform)
         try:
             result = self.decide(intent, cfg, exclude=exclude, purpose="meta-skill-router.reroute")
         except Exception as exc:
@@ -243,22 +247,20 @@ class Router:
             payload = {"success": True, "decision": DECISION_NO_SKILL,
                        "message": "No additional skill applies; continue with general tools.",
                        "considered": [c.manifest.name for c in result.candidates[:5]]}
-        if turn is not None:
-            new_allowed = result.allowed
-            new_aliases = result.allowed_aliases
+        new_allowed = result.allowed
+        new_aliases = result.allowed_aliases
 
-            def _apply(t: TurnState) -> None:
-                t.reroutes += 1
-                t.allowed = list(dict.fromkeys(t.allowed + new_allowed))
-                t.allowed_aliases = list(dict.fromkeys(t.allowed_aliases + new_aliases))
-            self.state.update(session_id, _apply)
+        def _apply(t: TurnState) -> None:
+            t.allowed = list(dict.fromkeys(t.allowed + new_allowed))
+            t.allowed_aliases = list(dict.fromkeys(t.allowed_aliases + new_aliases))
+        self.state.update(session_id, _apply)
         self.trace.write("route.reroute", session_id, {
             "turn_id": turn.turn_id if turn else "", "requirement_preview": requirement[:PREVIEW_CHARS],
             "decision": result.decision.to_dict(),
             "candidates": [{"name": c.manifest.name, "score": c.score} for c in result.candidates],
             "status": "ok", "latency_ms": result.latency_ms,
         })
-        payload["reroutes_remaining"] = max(0, cfg.max_reroutes_per_turn - ((turn.reroutes + 1) if turn else 1))
+        payload["reroutes_remaining"] = max(0, cfg.max_reroutes_per_turn - turn.reroutes)
         return payload
 
     # -- tool-call observation ------------------------------------------------------

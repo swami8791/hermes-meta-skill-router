@@ -210,6 +210,13 @@ def test_reroute_requires_text(make_router, skills_home, hermes):
     assert router.reroute(session_id="s1", remaining_requirement="  ")["success"] is False
 
 
+def test_reroute_requires_active_turn(make_router, skills_home, hermes):
+    router, ctx = make_router(answers=[SELECT_ARXIV])
+    out = router.reroute(session_id="s1", remaining_requirement="find papers")
+    assert out["success"] is False and out["error"] == "no_active_turn"
+    assert ctx.llm.calls == []
+
+
 # ---------------------------------------------------------------- hooks facade
 
 def test_hooks_accept_hermes_payload_shapes(router_mod, make_router, skills_home, hermes):

@@ -67,6 +67,7 @@ class RouterState:
         self._touched: Dict[str, float] = {}
         self._data_dir = data_dir
         self._loaded = False
+        self._loaded_path: Optional[Path] = None
 
     # -- persistence ------------------------------------------------------
     @property
@@ -75,12 +76,19 @@ class RouterState:
         return (Path(d) / "router-state.json") if d else None
 
     def _load(self) -> None:
-        if self._loaded or not self.path:
-            self._loaded = True
+        path = self.path
+        if self._loaded and path == self._loaded_path:
             return
+        # A callable data directory may change when Hermes switches profiles.  State
+        # from the old profile must never be visible in, or persisted to, the new one.
+        self._sessions.clear()
+        self._touched.clear()
         self._loaded = True
+        self._loaded_path = path
+        if path is None:
+            return
         try:
-            raw = json.loads(self.path.read_text(encoding="utf-8"))
+            raw = json.loads(path.read_text(encoding="utf-8"))
             now = time.time()
             for sid, d in (raw.get("sessions") or {}).items():
                 t = TurnState.from_dict(d)
@@ -93,10 +101,11 @@ class RouterState:
             logger.debug("router state unreadable; starting empty", exc_info=True)
 
     def _save(self) -> None:
-        if not self.path:
+        path = self._loaded_path
+        if path is None:
             return
         try:
-            _atomic_write(self.path, {"sessions": {sid: t.to_dict() for sid, t in self._sessions.items()}})
+            _atomic_write(path, {"sessions": {sid: t.to_dict() for sid, t in self._sessions.items()}})
         except Exception:
             logger.debug("router state not persisted", exc_info=True)
 
@@ -138,6 +147,18 @@ class RouterState:
             self._touched[session_id] = time.time()
             self._save()
             return t
+
+    def reserve_reroute(self, session_id: str, limit: int) -> tuple[Optional[TurnState], bool]:
+        """Atomically consume one reroute allowance for the current turn."""
+        with self._lock:
+            self._load()
+            t = self._sessions.get(session_id)
+            if t is None or t.reroutes >= limit:
+                return t, False
+            t.reroutes += 1
+            self._touched[session_id] = time.time()
+            self._save()
+            return t, True
 
     def end_turn(self, session_id: str) -> Optional[TurnState]:
         with self._lock:
