@@ -5,6 +5,10 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+### Changed
+- `ruff.toml` pins the lint rule set (E4, E7, E9, F) so `make lint` gives the same result on
+  Ruff 0.15 and 0.16+, whose defaults enable many more rules.
+
 ## [0.1.0] - 2026-09-23
 
 ### Added
