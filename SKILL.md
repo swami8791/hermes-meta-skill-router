@@ -7,6 +7,12 @@ description: Dynamically discover, select, sequence, supervise, and re-evaluate 
 
 Act as the capability supervisor between intent and execution.
 
+The Hermes plugin respects the host's enabled state and gates skill loading in
+active mode. Task-scoped activation and restoration are outside its current
+capabilities. On other hosts, use only the registry and execution controls
+the host exposes. A prompt-driven demo exercises the routing instructions.
+Use plugin tests to validate Hermes hooks and runtime behavior.
+
 ```text
 DISCOVER -> SELECT -> SEQUENCE -> SUPERVISE -> EVALUATE -> ADAPT
 ```
@@ -57,7 +63,8 @@ Wrap results in a typed artifact envelope containing producer, status, data, pro
 
 ## Recursive routing limits
 
-- Route remaining requirements, not the entire original request.
+- Route remaining requirements, not the entire original request. On Hermes,
+  `skill_route` requires a current routed turn. Each attempt consumes one slot.
 - Hermes MVP defaults: one reroute per turn, three skills per decision, five skills per turn (the host's stacked-skill cap). Raise them only with trace evidence.
 - Repeat a skill only when its manifest permits retry and the failure is retryable.
 - Track requirement fingerprints and measurable progress.
