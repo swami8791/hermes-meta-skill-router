@@ -41,6 +41,10 @@ class SkillManifest:
     tags: List[str] = field(default_factory=list)
     triggers: List[str] = field(default_factory=list)
     related_skills: List[str] = field(default_factory=list)
+    capability_id: str = ""
+    aliases: List[str] = field(default_factory=list)
+    negative_triggers: List[str] = field(default_factory=list)
+    routing_policy: str = "allow_if_discovered"
     requires_tools: List[str] = field(default_factory=list)
     requires_toolsets: List[str] = field(default_factory=list)
     fallback_for_tools: List[str] = field(default_factory=list)
@@ -71,6 +75,8 @@ class SkillManifest:
             "triggers": " ".join(self.triggers),
             "description": self.description,
             "category": self.category.replace("/", " ").replace("-", " "),
+            "aliases": " ".join(self.aliases),
+            "capability": self.capability_id.replace(".", " ").replace("-", " "),
         }
 
     def candidate_view(self, warnings: Optional[List[str]] = None) -> Dict[str, Any]:
@@ -80,6 +86,12 @@ class SkillManifest:
             view["tags"] = self.tags[:12]
         if self.triggers:
             view["triggers"] = self.triggers[:8]
+        if self.capability_id:
+            view["capability_id"] = self.capability_id
+        if self.aliases:
+            view["aliases"] = self.aliases[:8]
+        if self.negative_triggers:
+            view["negative_triggers"] = self.negative_triggers[:6]
         if warnings:
             view["warnings"] = warnings
         return view

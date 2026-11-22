@@ -16,7 +16,7 @@ from typing import Dict, List, Optional, Sequence, Tuple
 from .schemas import Candidate, SkillManifest
 
 _TOKEN_RE = re.compile(r"[A-Za-z0-9]+")
-_FIELD_WEIGHTS = {"name": 3, "tags": 2, "triggers": 2, "description": 1, "category": 1}
+_FIELD_WEIGHTS = {"name": 3, "aliases": 3, "tags": 2, "triggers": 2, "capability": 2, "description": 1, "category": 1}
 _thread_local = threading.local()
 
 K1 = 1.5

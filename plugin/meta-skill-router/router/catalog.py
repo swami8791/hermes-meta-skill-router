@@ -15,6 +15,7 @@ from contextlib import suppress
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Optional, Tuple
 
+from .governance import apply_governance_registry
 from .manifest import dedupe_first_wins, manifest_from_path, manifest_from_plugin_entry
 from .schemas import SkillManifest
 
@@ -191,7 +192,7 @@ class SkillCatalog:
                     m = manifest_from_plugin_entry(entry)
                     m.disabled = m.name in disabled
                     found.append(m)
-        entries = dedupe_first_wins(found)
+        entries = apply_governance_registry(dedupe_first_wins(found))
         self.last_build = {
             "files": files, "bytes_read": bytes_read, "entries": len(entries),
             "duration_ms": int((time.monotonic() - started) * 1000), "dirs": [str(d) for d in all_dirs],
