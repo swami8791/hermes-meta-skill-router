@@ -23,7 +23,7 @@
 
 <br>
 
-[Install](#quick-start) · [How it works](#how-it-works) · [Modes](#modes) · [Guarantees](#guarantees) · [Development](#development)
+[Project hub](https://hermes-meta-skill-router.youfirst.chatgpt.site) · [Install](#quick-start) · [How it works](#how-it-works) · [Modes](#modes) · [Guarantees](#guarantees) · [Development](#development)
 
 </div>
 
