@@ -188,7 +188,9 @@ class Router:
         return self._finish(intent, cfg, result)
 
     def _finish(self, intent: TaskIntent, cfg: RouterConfig, result: RouteResult) -> RouteResult:
-        if intent.session_id and result.decision.decision not in (DECISION_SKIPPED,):
+        if intent.session_id and result.decision.decision == DECISION_SKIPPED:
+            self.state.end_turn(intent.session_id)
+        elif intent.session_id:
             self.state.begin_turn(intent.session_id, intent.turn_id, mode=cfg.mode,
                                   decision=result.decision.decision, allowed=result.allowed,
                                   allowed_aliases=result.allowed_aliases)
@@ -209,17 +211,29 @@ class Router:
                 platform: str = "") -> Dict[str, Any]:
         """One bounded reroute for the current turn. Returns a tool-result dict."""
         cfg = self.config
-        turn = self.state.current(session_id) if session_id else None
         requirement = (remaining_requirement or "").strip()
         if not requirement:
             return {"success": False, "error": "remaining_requirement is required"}
-        if turn is not None and turn.reroutes >= cfg.max_reroutes_per_turn:
+        reserved = False
+        exclude = set(tried_skills or [])
+
+        def reserve(t: TurnState) -> None:
+            nonlocal reserved
+            if t.reroutes < cfg.max_reroutes_per_turn:
+                t.reroutes += 1
+                exclude.update(t.loads)
+                exclude.update(t.allowed)
+                reserved = True
+
+        turn = self.state.update(session_id, reserve) if session_id else None
+        if turn is None:
+            return {"success": False, "error": "no_active_turn"}
+        if not reserved:
             self.trace.write("route.reroute", session_id, {"turn_id": turn.turn_id, "status": "budget_exhausted"})
             return {"success": False, "error": "budget_exhausted",
                     "message": f"Routing budget for this turn is used ({turn.reroutes}/{cfg.max_reroutes_per_turn}). "
                                "Proceed with the skills already loaded or ask the user."}
-        exclude = set(tried_skills or []) | (set(turn.loads) | set(turn.allowed) if turn else set())
-        intent = TaskIntent(text=requirement, session_id=session_id, turn_id=turn.turn_id if turn else "", platform=platform)
+        intent = TaskIntent(text=requirement, session_id=session_id, turn_id=turn.turn_id, platform=platform)
         try:
             result = self.decide(intent, cfg, exclude=exclude, purpose="meta-skill-router.reroute")
         except Exception as exc:
@@ -243,22 +257,20 @@ class Router:
             payload = {"success": True, "decision": DECISION_NO_SKILL,
                        "message": "No additional skill applies; continue with general tools.",
                        "considered": [c.manifest.name for c in result.candidates[:5]]}
-        if turn is not None:
-            new_allowed = result.allowed
-            new_aliases = result.allowed_aliases
+        def apply(t: TurnState) -> None:
+            if t is turn:
+                t.allowed = list(dict.fromkeys(t.allowed + result.allowed))
+                t.allowed_aliases = list(dict.fromkeys(t.allowed_aliases + result.allowed_aliases))
 
-            def _apply(t: TurnState) -> None:
-                t.reroutes += 1
-                t.allowed = list(dict.fromkeys(t.allowed + new_allowed))
-                t.allowed_aliases = list(dict.fromkeys(t.allowed_aliases + new_aliases))
-            self.state.update(session_id, _apply)
+        if self.state.update(session_id, apply) is not turn:
+            return {"success": False, "error": "no_active_turn"}
         self.trace.write("route.reroute", session_id, {
-            "turn_id": turn.turn_id if turn else "", "requirement_preview": requirement[:PREVIEW_CHARS],
+            "turn_id": turn.turn_id, "requirement_preview": requirement[:PREVIEW_CHARS],
             "decision": result.decision.to_dict(),
             "candidates": [{"name": c.manifest.name, "score": c.score} for c in result.candidates],
             "status": "ok", "latency_ms": result.latency_ms,
         })
-        payload["reroutes_remaining"] = max(0, cfg.max_reroutes_per_turn - ((turn.reroutes + 1) if turn else 1))
+        payload["reroutes_remaining"] = max(0, cfg.max_reroutes_per_turn - turn.reroutes)
         return payload
 
     # -- tool-call observation ------------------------------------------------------
