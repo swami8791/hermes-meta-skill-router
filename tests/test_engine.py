@@ -186,6 +186,44 @@ def test_one_bounded_reroute(make_router, skills_home, hermes):
     assert kinds.count("route.reroute") == 2
 
 
+def test_reroute_requires_current_turn(make_router, skills_home, hermes):
+    router, ctx = make_router(settings={"mode": "active"}, answers=[SELECT_ARXIV])
+    for session_id in ("", "s1"):
+        for _ in range(2):
+            assert router.reroute(session_id=session_id, remaining_requirement=PAPERS) == {
+                "success": False, "error": "no_active_turn",
+            }
+    assert not ctx.llm.calls
+
+    _route(router, PAPERS)
+    _route(router, "ok")
+    assert router.reroute(session_id="s1", remaining_requirement=PAPERS)["error"] == "no_active_turn"
+    assert len(ctx.llm.calls) == 1
+
+
+def test_reroute_reports_remaining_budget(make_router, skills_home, hermes):
+    router, _ = make_router(settings={"mode": "active", "max_reroutes_per_turn": 3}, answers=[SELECT_ARXIV])
+    _route(router, PAPERS)
+    for remaining in (2, 1, 0):
+        out = router.reroute(session_id="s1", remaining_requirement=PAPERS)
+        assert out["success"] and out["reroutes_remaining"] == remaining
+    assert router.reroute(session_id="s1", remaining_requirement=PAPERS)["error"] == "budget_exhausted"
+
+
+def test_reroute_reserves_budget_before_selector_runs(make_router, skills_home, hermes, monkeypatch):
+    router, _ = make_router(settings={"mode": "active"}, answers=[SELECT_ARXIV])
+    _route(router, PAPERS)
+    decide = router.decide
+
+    def decide_with_overlapping_call(*args, **kwargs):
+        other = router.reroute(session_id="s1", remaining_requirement=PAPERS)
+        assert other["error"] == "budget_exhausted"
+        return decide(*args, **kwargs)
+
+    monkeypatch.setattr(router, "decide", decide_with_overlapping_call)
+    assert router.reroute(session_id="s1", remaining_requirement=PAPERS)["success"]
+
+
 def test_reroute_with_no_remaining_candidates_is_a_gap_without_an_llm_call(make_router, skills_home, hermes):
     router, ctx = make_router(settings={"mode": "advisory"}, answers=[SELECT_ARXIV, GAP])
     _route(router, PAPERS)

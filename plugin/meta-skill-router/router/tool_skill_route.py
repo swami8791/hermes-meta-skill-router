@@ -13,7 +13,7 @@ SKILL_ROUTE_SCHEMA: Dict[str, Any] = {
         "Re-route the CURRENT request to installed skills when a requirement is still unmet after the "
         "skills you were told to load. Pass the remaining requirement in plain language. Returns the skills to "
         "load next (call skill_view for each), a capability gap when nothing installed applies, or "
-        "budget_exhausted when this turn's reroute allowance is used. Never installs anything."
+        "budget_exhausted when this turn's reroute allowance is used. Requires a current routed turn. Never installs anything."
     ),
     "parameters": {
         "type": "object",

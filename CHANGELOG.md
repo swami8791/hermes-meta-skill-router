@@ -5,9 +5,13 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+### Fixed
+- Reject reroutes without a current routed turn and clear prior routing state on skipped turns.
+- Reserve reroute budget before selection and report the actual number of remaining attempts.
+
 ### Changed
-- `ruff.toml` pins the lint rule set (E4, E7, E9, F) so `make lint` gives the same result on
-  Ruff 0.15 and 0.16+, whose defaults enable many more rules.
+- Pin the Ruff rules used by `make lint` across Ruff 0.15 and newer versions.
+- Clarify the Hermes plugin's activation limits and distinguish prompt-driven demos from plugin tests.
 
 ## [0.1.0] - 2026-09-23
 
